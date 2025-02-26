@@ -1,101 +1,96 @@
-import Image from "next/image";
+"use client"
+
+import type React from "react";
+import { useState, useEffect } from "react";
+
+const API_KEY = "a18fd9081f6c4f80b96183234252602";
+const BASE_URL = "http://api.weatherapi.com/v1/current.json";
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [city, setCity] = useState("");
+  const [cities, setCities] = useState<string[]>([]);
+  const [weatherData, setWeatherData] = useState<Record<string, any>>({});
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  // Load cities on startup
+  useEffect(() => {
+    const saved = localStorage.getItem("cities");
+    if (saved) setCities(JSON.parse(saved));
+  }, []);
+
+  useEffect(() => {
+    cities.forEach((city) => {
+      fetch(`${BASE_URL}?key=${API_KEY}&q=${city}`)
+        .then((res) => res.json())
+        .then((data) => {
+          setWeatherData((prevData) => ({ ...prevData, [city]: data }));
+        });
+    });
+  }, [cities]);
+
+  // Add a city
+  function addCity(e: React.FormEvent) {
+    e.preventDefault();
+    if (city && !cities.includes(city)) {
+      const newCities = [...cities, city];
+      setCities(newCities);
+      localStorage.setItem("cities", JSON.stringify(newCities));
+      setCity("");
+    }
+  }
+
+  // Remove a city
+  function removeCity(cityToRemove: string) {
+    const newCities = cities.filter((c) => c !== cityToRemove);
+    setCities(newCities);
+    setWeatherData((prevData) => {
+      const newData = { ...prevData };
+      delete newData[cityToRemove];
+      return newData;
+    });
+    localStorage.setItem("cities", JSON.stringify(newCities));
+  }
+
+  return (
+    <div className="p-4 max-w-5xl mx-auto">
+      <h1 className="text-xl font-bold text-center mb-4">Weather Dashboard</h1>
+
+      {/* Search */}
+      <form onSubmit={addCity} className="flex mb-6">
+        <input
+          value={city}
+          onChange={(e) => setCity(e.target.value)}
+          placeholder="Enter city name"
+          className="border p-1 flex-1"
+        />
+        <button className="bg-blue-500 text-white p-1 px-2">Add</button>
+      </form>
+
+      {/* City list */}
+      {cities.length === 0 ? (
+        <div className="text-center p-4 border">No cities added yet</div>
+      ) : (
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
+          {cities.map((city) => (
+            <div key={city} className="border p-3 relative">
+              <button onClick={() => removeCity(city)} className="absolute right-2 top-1">
+                ×
+              </button>
+              <div className="font-bold">{city}</div>
+              {weatherData[city] ? (
+                <div className="flex justify-between mt-2">
+                  <div>
+                    <span className="text-2xl mr-2">{weatherData[city].current.condition.text}</span>
+                    <span className="text-xl">{weatherData[city].current.temp_c}°C</span>
+                  </div>
+                  <div className="text-sm text-gray-500">Humidity: {weatherData[city].current.humidity}%</div>
+                </div>
+              ) : (
+                <div className="text-sm text-gray-500">Loading...</div>
+              )}
+            </div>
+          ))}
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      )}
     </div>
   );
 }
