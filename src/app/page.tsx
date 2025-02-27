@@ -10,6 +10,7 @@ export default function Home() {
   const [city, setCity] = useState("");
   const [cities, setCities] = useState<string[]>([]);
   const [weatherData, setWeatherData] = useState<Record<string, any>>({});
+  const [error, setError] = useState("");
 
   // Load cities on startup
   useEffect(() => {
@@ -22,7 +23,12 @@ export default function Home() {
       fetch(`${BASE_URL}?key=${API_KEY}&q=${city}`)
         .then((res) => res.json())
         .then((data) => {
-          setWeatherData((prevData) => ({ ...prevData, [city]: data }));
+          if (data.error) {
+            setError(`City not found: ${city}`);
+          } else {
+            setWeatherData((prevData) => ({ ...prevData, [city]: data }));
+            setError("");
+          }
         });
     });
   }, [cities]);
@@ -31,10 +37,19 @@ export default function Home() {
   function addCity(e: React.FormEvent) {
     e.preventDefault();
     if (city && !cities.includes(city)) {
-      const newCities = [...cities, city];
-      setCities(newCities);
-      localStorage.setItem("cities", JSON.stringify(newCities));
-      setCity("");
+      fetch(`${BASE_URL}?key=${API_KEY}&q=${city}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.error) {
+            setError(`City not found: ${city}`);
+          } else {
+            const newCities = [...cities, city];
+            setCities(newCities);
+            localStorage.setItem("cities", JSON.stringify(newCities));
+            setCity("");
+            setError("");
+          }
+        });
     }
   }
 
@@ -55,7 +70,7 @@ export default function Home() {
       <h1 className="text-xl font-bold text-center mb-4">Weather Dashboard</h1>
 
       {/* Search */}
-      <form onSubmit={addCity} className="flex mb-6">
+      <form onSubmit={addCity} className="flex mb-2">
         <input
           value={city}
           onChange={(e) => setCity(e.target.value)}
@@ -64,6 +79,7 @@ export default function Home() {
         />
         <button className="bg-blue-500 text-white p-1 px-2">Add</button>
       </form>
+      {error && <div className="text-red-500 mb-4">{error}</div>}
 
       {/* City list */}
       {cities.length === 0 ? (
